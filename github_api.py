@@ -65,45 +65,13 @@ def heapSort(arr):
 
     # Driver code to test above
 
-def make_url_repos(organization):
-    """
-    Returns all the repositories for an organization.
+def request_url(url_repos_prs):
 
-    Parameters:
-    organization (str): Receive the Organization from command line
+    r = requests.get(url_repos_prs)
+    request_repos_prs = r.json()
+    return request_repos_prs
 
-    Returns:
-    repos (json): Json with all the repositories of the organization
-    """
-
-    repos_txt = 'repos'
-    url_repos = 'https://api.github.com/orgs/{}/{}'.format(organization,repos_txt)
-    r = requests.get(url_repos)
-    repos = r.json()
-
-    return repos
-
-def make_url_pulls(organization, repo_name):
-    """
-    Returns the pull request for all the repositories of an organization.
-
-    Parameters:
-    organization (str): Receive the Organization from command line
-    repo_name (str): Receive the name of the repository
-
-    Returns:
-    repos_pull_request (json): Json with the pull request for all the repositories of an organization.
-
-    """
-
-    pulls_txt = 'pulls'
-    url_prs = 'https://api.github.com/repos/{}/{}/{}'.format(organization,repo_name,pulls_txt)
-    r2 = requests.get(url_prs)
-    repos_pull_request = r2.json()
-
-    return repos_pull_request
-
-def top_ranking_repos(organization, top_n):
+def print_top_ranking_repos(top_n, repos):
     """
     Print the results of the top ranking (highest) for the stars and forks in the repos for an organization.
 
@@ -117,8 +85,6 @@ def top_ranking_repos(organization, top_n):
 
     """
 
-    repos = make_url_repos(organization)
-
     #lists
     list_sort_stars =[]
     list_sort_forks = []
@@ -128,6 +94,7 @@ def top_ranking_repos(organization, top_n):
         forks_count = repo['name'], repo['forks_count']
         list_sort_stars.append(stars_count)
         list_sort_forks.append(forks_count)
+    #print(list_sort_stars)
 
     heapSort(list_sort_stars)
     print('Top-N repos by number of stars {}'.format(list_sort_stars[:top_n]))
@@ -135,27 +102,7 @@ def top_ranking_repos(organization, top_n):
     heapSort(list_sort_forks)
     print('Top-N repos by number of forks {}'.format(list_sort_forks[:top_n]))
 
-def pull_request_count(organization,repo_name):
-    """
-    Return the total of pull requests counted in the repos for an organization.
-
-    Parameters:
-    organization (str): Receive the Organization from command line
-    repo_name (str): Receive the name of the repository
-
-    Returns:
-    prs_count (int): The total of PRs for a repo
-
-    """
-
-    repos_pull_request = make_url_pulls(organization,repo_name)
-
-    #print(len(repos_pull_request))
-    prs_count= len(repos_pull_request)
-
-    return prs_count
-
-def top_ranking_prs_cp(organization, top_n):
+def print_top_ranking_prs_cp(organization, top_n, repos):
     """
     Print the results of the top ranking (highest) by number of Pull Requests and contribution percentage at organization.
 
@@ -169,15 +116,16 @@ def top_ranking_prs_cp(organization, top_n):
 
     """
 
-    repos = make_url_repos(organization)
-
     #list
     list_pull_requests =[]
     list_contribution_percentage = []
 
     for repo in repos:
         repo_name = repo['name']
-        prs_count = pull_request_count(organization, repo_name)
+
+        url_prs = 'https://api.github.com/repos/{}/{}/pulls'.format(organization, repo_name)
+        prs_count = len(request_url(url_prs))
+
         pull_request_total_count = repo['name'], prs_count
         list_pull_requests.append(pull_request_total_count)
         try:
@@ -215,27 +163,28 @@ def get_arguments():
     parser.add_argument('-n', '--top_number', type=int, help = 'the top N number', required=True)
     return parser.parse_args()
 
-top_ranking_repos('twitter',5)
-top_ranking_prs_cp('twitter',5)
-"""
-call setup for neoworks
-usage:
-python script_name.py -s <organization> -n <top number>
-eg:
-python twitter.py -o twitter -n 5
 
-""
+"""
+call setup
+usage: python script_name.py -o <organization> -n <top number>
+eg: python3 github_api.py -o twitter -n 5
+"""
 
 if __name__ == "__main__":
     args = get_arguments()
+    organization=args.organization
+    top_number=args.top_number
 
-    orga=args.organization
-    topNumber=args.top_number
+    if top_number <= 0 :
+        print('Top N must be greater than 0')
 
-    try:
-        top_ranking_repos(orga,topNumber)
-    except Exception as ex:
-        print(ex)
-    finally:
-        print("------------- END-------------------------------------------")
-"""
+        import sys
+        sys.exit("Error message")
+
+    # repos
+    url_repos = 'https://api.github.com/orgs/{}/repos'.format(organization)
+    repos_list = request_url(url_repos)
+
+    print_top_ranking_repos(top_number, repos_list)
+    print_top_ranking_prs_cp(organization, top_number, repos_list)
+
