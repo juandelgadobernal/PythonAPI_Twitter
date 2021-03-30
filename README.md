@@ -1,4 +1,4 @@
-# projectTwitter
+# Python API Twitter
 
 Using any JVM language or Python, build a command line tool that analyzes the popularity of an organization’s GitHub repos.  The tool should report statistics for the following four dimensions:
 * Top-N repos by number of stars.
